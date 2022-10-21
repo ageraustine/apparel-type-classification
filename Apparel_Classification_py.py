@@ -1,0 +1,399 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/ageraustine/apparel-type-classification/blob/master/Apparel_Classification_py.py\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "1AnI2gP4TBbI"
+      },
+      "source": [
+        "                    Data Fetching and Cleansing"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {
+        "id": "B5NfP2E1Syl5"
+      },
+      "outputs": [],
+      "source": [
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import zipfile\n",
+        "import os\n",
+        "import shutil"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 2,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "tUOFnc6ATPrw",
+        "outputId": "0e471b87-4a70-41f4-ad39-e9bc8558cf1f"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Mounted at /content/drive/\n"
+          ]
+        }
+      ],
+      "source": [
+        "from google.colab import drive\n",
+        "drive.mount('/content/drive/')\n",
+        "styles_path = '/content/drive/MyDrive/datasets/fashion_dataset/styles.csv'"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 3,
+      "metadata": {
+        "id": "iyTtwZhqTRCe"
+      },
+      "outputs": [],
+      "source": [
+        "zip_dir = '/content/drive/MyDrive/datasets/fashion_dataset/fashion_products.zip'\n",
+        "dataset_dir = os.getcwd() + '/dataset'\n",
+        "\n",
+        "with zipfile.ZipFile(zip_dir, \"r\") as zp:\n",
+        "  zp.extractall(dataset_dir)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "DmdCc05WTlna"
+      },
+      "source": [
+        "                Categorization Utilities"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 4,
+      "metadata": {
+        "id": "rt9XUW2fTVP8"
+      },
+      "outputs": [],
+      "source": [
+        "def categorize(dataframe, idx, source, dest)->dict:\n",
+        "    \"\"\"\n",
+        "    accepts fours arguments i.e dataframe, idx, source, dest\n",
+        "\n",
+        "    returns a dictionary containing arrays as values\n",
+        "    \"\"\"\n",
+        "    categories = {}\n",
+        "    for id in idx:\n",
+        "        img_category = dataframe.loc[dataframe[source] == id, dest].to_list()[0]\n",
+        "        current_img = str(id) + \".jpg\"\n",
+        "        if img_category in categories:\n",
+        "            values = categories[img_category]\n",
+        "            values.append(current_img)\n",
+        "            categories[img_category] = values\n",
+        "        else:\n",
+        "            categories[img_category] = [current_img]\n",
+        "    return categories\n",
+        "\n",
+        "def copy_images(image_dict, source, dest):\n",
+        "    \"\"\"\n",
+        "    Accepts image dictionary, source directory and target directory args\n",
+        "\n",
+        "    copies images into categorized directories\n",
+        "    \"\"\"\n",
+        "    for key, val in image_dict.items():\n",
+        "        dest_image_dir = f\"{dest}/{key}\"\n",
+        "        if(not os.path.exists(dest_image_dir)):\n",
+        "            os.makedirs(dest_image_dir)\n",
+        "        for image in val:\n",
+        "            source_img_path = f\"{source}/{image}\"\n",
+        "            dest_img_path = f\"{dest_image_dir}/{image}\"\n",
+        "            if(os.path.exists(source_img_path)):\n",
+        "                if(not os.path.exists(dest_img_path)):\n",
+        "                    shutil.copyfile(source_img_path, dest_img_path)\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "VsHh0nQcTuWg"
+      },
+      "source": [
+        "                       Categorization of The Dataset\n",
+        "The fashion product dataset is categorized based on articleType column. This splits the data into various groups i.e shirts, trousers, watches etc                       "
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 5,
+      "metadata": {
+        "id": "4gQ2Y9SUTaLO"
+      },
+      "outputs": [],
+      "source": [
+        "import pandas as pd\n",
+        "# Load the styles csv file\n",
+        "styles_dir = '/content/drive/MyDrive/datasets/fashion_dataset/styles.csv'\n",
+        "fashion_df = pd.read_csv(styles_dir, on_bad_lines='skip')\n",
+        "ids = fashion_df['id']\n",
+        "\n",
+        "# Categorize the images based on article type i.e shirts, trousers etc\n",
+        "article_categories = categorize(fashion_df, ids, 'id', 'articleType')"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 6,
+      "metadata": {
+        "id": "uGZ4uJ-uTdpe"
+      },
+      "outputs": [],
+      "source": [
+        "# Copy images from source directories to a directory with class sub-directories\n",
+        "source_dir = f\"{dataset_dir}/images\"\n",
+        "dest_dir = f\"{dataset_dir}/articleType\"\n",
+        "copy_images(article_categories, source_dir, dest_dir)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "cvohl-2VWfQY"
+      },
+      "source": [
+        "               DATASET LOADING"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 7,
+      "metadata": {
+        "id": "EYK-a30VWe3I"
+      },
+      "outputs": [],
+      "source": [
+        "import tensorflow as tf\n",
+        "from tensorflow import keras\n",
+        "from tensorflow.keras import layers"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "DzoexiFnWyQf"
+      },
+      "outputs": [],
+      "source": [
+        "BATCH_SIZE = 32\n",
+        "train_ds = keras.utils.image_dataset_from_directory(\n",
+        "    dest_dir,\n",
+        "    subset = \"training\",\n",
+        "    validation_split = 0.2,\n",
+        "    seed=132,\n",
+        "    batch_size= BATCH_SIZE\n",
+        ")\n",
+        "\n",
+        "val_ds = keras.utils.image_dataset_from_directory(\n",
+        "    dest_dir,\n",
+        "    subset = \"validation\",\n",
+        "    validation_split= 0.2,\n",
+        "    seed=132\n",
+        ")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "EVaPiGKWUK9t",
+        "outputId": "62aecbbf-6e7c-4fef-f37f-92303b80f197"
+      },
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "1111"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 9
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "eqQVsEVkYET5"
+      },
+      "source": [
+        "                      Data Preprocessing"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 12,
+      "metadata": {
+        "id": "EeUcPdsOX-lz"
+      },
+      "outputs": [],
+      "source": [
+        "data_augmentation = keras.Sequential(\n",
+        "    [\n",
+        "        layers.Rescaling(1./225),\n",
+        "        layers.RandomFlip(\"horizontal\"),\n",
+        "        layers.RandomRotation(0.1),\n",
+        "        layers.RandomZoom(0.1), \n",
+        "    ]\n",
+        ")\n",
+        "train_ds = train_ds.map(lambda x,y:(data_augmentation(x), y))\n",
+        "val_ds =  val_ds.map(lambda x,y:(data_augmentation(x), y))"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "0GeRpREgeC3i"
+      },
+      "source": [
+        "                         Model Building"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "S7idmCN7eHsO"
+      },
+      "outputs": [],
+      "source": [
+        "# MODEL PARAMETERS\n",
+        "ISIZE = 256\n",
+        "NUM_CLASSES = 143\n",
+        " \n",
+        "\n",
+        "# Model layers\n",
+        "model_name='EfficientNetB3'\n",
+        "base_model= tf.keras.applications.EfficientNetB3(include_top=False, weights='imagenet',input_shape=(ISIZE, ISIZE, 3), pooling='max')\n",
+        "x= base_model.output\n",
+        "x= layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001 )(x)\n",
+        "x = layers.Dense(256, activation='relu')(x)\n",
+        "x= keras.layers.Dropout(rate=.45, seed=123)(x)\n",
+        "\n",
+        "# softmax activation function for multi-class classification     \n",
+        "output= layers.Dense(NUM_CLASSES, activation='softmax')(x)\n",
+        "# Model Initialization\n",
+        "model= keras.Model(inputs=base_model.input, outputs=output)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "NdYCjX00fGGW"
+      },
+      "source": [
+        "Model Compilation"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 14,
+      "metadata": {
+        "id": "1d0H2ZZSfA-Q"
+      },
+      "outputs": [],
+      "source": [
+        "model.compile(optimizer=\"adam\", loss=\"sparse_categorical_crossentropy\")"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "LXyB53_SfKms"
+      },
+      "source": [
+        "Model Training"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "R21DuUTofKP8",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "ad5f29c6-77ef-4556-c413-59f789d4db97"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Epoch 1/100\n",
+            "34/34 [==============================] - 2356s 70s/step - loss: 3.4753 - val_loss: 4.4973\n",
+            "Epoch 2/100\n",
+            "11/34 [========>.....................] - ETA: 9:25 - loss: 2.7025"
+          ]
+        }
+      ],
+      "source": [
+        "EPOCHS = 100\n",
+        "TRAIN_LEN = len(train_ds)\n",
+        "STEPS= TRAIN_LEN // BATCH_SIZE\n",
+        "MODEL_PATH = '/content/drive/MyDrive/MachineLearning/models/apparel_classifier.h5'\n",
+        "\n",
+        "\n",
+        "callbacks = [\n",
+        "    keras.callbacks.ModelCheckpoint(MODEL_PATH, save_best_only=True),\n",
+        "    keras.callbacks.CSVLogger('training.log', separator=',', append=False),\n",
+        "    keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True, mode='min')\n",
+        "    ]\n",
+        "history = model.fit(train_ds,\n",
+        "                    epochs=EPOCHS,\n",
+        "                    steps_per_epoch = STEPS,\n",
+        "                    validation_data = val_ds,\n",
+        "                    callbacks=callbacks,\n",
+        "                    verbose=True,\n",
+        "                    shuffle = True,\n",
+        "                    workers=4)"
+      ]
+    }
+  ],
+  "metadata": {
+    "colab": {
+      "collapsed_sections": [],
+      "provenance": [],
+      "authorship_tag": "ABX9TyO8VKPLGBALq/qEOkknO79G",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "name": "python3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 0
+}
